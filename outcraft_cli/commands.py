@@ -80,7 +80,15 @@ def run(args: argparse.Namespace, client: Client) -> object:
             "verified": False,
             "note": "Low-level response only; inspect persisted state before retrying.",
         }
+    if args.group == "analytics":
+        return client.analytics.overview(args.campaign, args.range)
     command = args.command
+    if args.group == "leads":
+        if command == "list":
+            return client.leads.list(args.campaign, args.status, args.page, args.per_page)
+        if command == "count":
+            return client.leads.counts(args.campaign)
+        return client.leads.show(args.id)
     if args.group == "sequence":
         if command == "list":
             return client.inspect(args.id, "sequence")

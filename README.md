@@ -60,6 +60,10 @@ outcraft --env-file .env auth login
 outcraft campaigns list
 outcraft campaigns show 123 --section sequence
 outcraft campaigns rename 123 'New campaign name' --yes
+outcraft leads count --campaign 123
+outcraft leads list --campaign 123 --status in_outreach --per-page 100
+outcraft leads show 456
+outcraft analytics --campaign 123 --range 30d
 outcraft --help
 ```
 
@@ -88,7 +92,7 @@ For a host that accepts `mcpServers` JSON, merge this entry without replacing ot
 {"mcpServers":{"outcraft":{"command":"/absolute/path/outcraft-cli/.venv/bin/outcraft-mcp","args":["--env-file","/absolute/path/outcraft-cli/.env"]}}}
 ```
 
-The stdio server opens no listening port and logs in only when needed. It supports campaign reads, creation, editing, archive, duplication, pause/resume, publication and discovered dashboard actions. Restart or start a new agent session if required, then verify tool discovery and a read-only campaign request.
+The stdio server opens no listening port and logs in only when needed. It supports campaign reads, lead lists, lead counts per status, lead details, analytics, creation, editing, archive, duplication, pause/resume, publication and discovered dashboard actions. Restart or start a new agent session if required, then verify tool discovery and a read-only campaign request.
 
 </details>
 
