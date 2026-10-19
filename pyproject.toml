@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=78"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "outcraft-cli"
+version = "0.1.0"
+description = "Unofficial Outcraft CLI and MCP server for campaign management"
+requires-python = ">=3.11"
+dependencies = ["httpx>=0.28.1,<1"]
+
+[project.optional-dependencies]
+browser = ["playwright>=1.62,<2"]
+mcp = ["mcp>=2.3,<3"]
+
+[project.scripts]
+outcraft = "outcraft_cli.cli:main"
+outcraft-mcp = "outcraft_cli.mcp_server:main"
+
+[tool.setuptools.packages.find]
+include = ["outcraft_cli*"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["outcraft_cli"]
