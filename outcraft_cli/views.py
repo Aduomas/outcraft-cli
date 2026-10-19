@@ -121,9 +121,11 @@ def require_confirmation(confirm: bool) -> None:
         )
 
 
-def valid_name(name: str) -> None:
-    if not 3 <= len(name.strip()) <= 191:
+def valid_name(name: str) -> str:
+    normalized = " ".join(name.split())
+    if not 3 <= len(normalized) <= 191:
         raise OutcraftError("Campaign names must contain 3 to 191 characters.")
+    return normalized
 
 
 def lookup(data: dict[str, object], path: str) -> object:

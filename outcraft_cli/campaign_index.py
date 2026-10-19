@@ -29,12 +29,10 @@ class CampaignIndex:
     def items(self, archived: bool = False, page: int = 1) -> list[dict[str, object]]:
         return campaigns_from_page(self.page(archived, page))
 
-    def pages(
-        self, archived: bool = False, first: Page | None = None
-    ) -> Iterator[tuple[Page, list[dict[str, object]]]]:
+    def pages(self, archived: bool = False) -> Iterator[tuple[Page, list[dict[str, object]]]]:
         seen: set[tuple[int, ...]] = set()
         for number in range(1, 101):
-            page = first if number == 1 and first is not None else self.page(archived, number)
+            page = self.page(archived, number)
             records = campaigns_from_page(page)
             signature = tuple(int(str(r["id"])) for r in records)
             if signature in seen:
@@ -49,10 +47,8 @@ class CampaignIndex:
             "Campaign pagination exceeded 100 pages; narrow the account before editing."
         )
 
-    def locate(
-        self, campaign_id: int, archived: bool = False, first: Page | None = None
-    ) -> tuple[Page, dict[str, object]]:
-        for page, records in self.pages(archived, first):
+    def locate(self, campaign_id: int, archived: bool = False) -> tuple[Page, dict[str, object]]:
+        for page, records in self.pages(archived):
             for record in records:
                 if record["id"] == campaign_id:
                     return page, record

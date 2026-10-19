@@ -50,6 +50,8 @@ python3 -m venv .venv
 
 List returns **1 dashboard page**, not an invented all-records API. `--search` filters that page locally. Export retrieves all 13 setup sections for 1 campaign, including the current editable data, table rows, actions, field bindings, and links.
 
+Create and rename normalize surrounding and repeated whitespace in campaign names; a dry run shows the normalized name.
+
 **`campaigns delete` means archive**, explicitly reported as `permanently_deleted: false`. No permanent-delete contract was visible, so the CLI does not invent one. The archive view exposes Re-Activate through the discovered `unarchive` action, not permanent deletion. Resume can contact real leads; it always requires `--yes`.
 
 ## Edit setup

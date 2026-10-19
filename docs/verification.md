@@ -22,6 +22,6 @@ To unblock direct campaign management, ask Outcraft to permit an authorized prog
 
 ## Implementation review
 
-- **Standards:** added action/credential tests, fixed empty environment-variable precedence, removed the fresh-clone env-file claim.
+- **Standards:** added action/credential tests, fixed empty environment-variable precedence, removed the fresh-clone env-file claim, normalized campaign names before sending/comparing them, and removed an unused pagination parameter.
 - **Intent:** fixed page-2 target resolution, nested component ownership and named-partial rendering; added the real empty-PHP-array and archived-card shapes as regression cases.
 - **Docs:** campaign deletion is archive, publishing is distinct from running, low-level operations report unverified outcomes, source inspection follows the campaign's current onboarding redirect.

@@ -86,7 +86,7 @@ class Client:
 
     def create(self, name: str, confirm: bool = False) -> dict[str, object]:
         require_confirmation(confirm)
-        valid_name(name)
+        name = valid_name(name)
         page = self.index.page()
         result = mounted_action(
             self.livewire,
@@ -111,7 +111,7 @@ class Client:
 
     def rename(self, campaign_id: int, name: str, confirm: bool = False) -> dict[str, object]:
         require_confirmation(confirm)
-        valid_name(name)
+        name = valid_name(name)
         section_path(campaign_id, "finish")
         page, _ = self.index.locate(campaign_id)
         mounted_action(

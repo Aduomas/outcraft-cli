@@ -35,7 +35,7 @@ def mutation_plan(args: argparse.Namespace) -> dict[str, object] | None:
     if not write:
         return None
     if hasattr(args, "name"):
-        valid_name(args.name)
+        args.name = valid_name(args.name)
     if hasattr(args, "id"):
         section_path(args.id, getattr(args, "section", "finish"))
     operation = (
