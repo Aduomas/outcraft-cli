@@ -28,8 +28,9 @@
 2. **Copy this prompt and paste it into the agent.** Use the copy button on the right of the box.
 
    ```text
-   Set up https://github.com/Aduomas/outcraft-cli for me so I can manage Outcraft from this agent.
-   Follow the "For AI agents" section of its README exactly, then tell me what passed.
+   Set up https://github.com/Aduomas/outcraft-cli so I can
+   manage Outcraft from this agent. Follow the "For AI agents"
+   section of its README exactly, then tell me what passed.
    ```
 
 3. **Add your Outcraft login when the agent asks.** It creates a private file on your computer for your email and password. Type them into that file, **never into the chat**.
