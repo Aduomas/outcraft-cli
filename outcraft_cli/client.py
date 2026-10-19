@@ -4,13 +4,13 @@ import re
 from urllib.parse import urlsplit
 
 from .actions import find_action_component, mounted_action
+from .campaign_index import CampaignIndex
 from .errors import OutcraftError
-from .html import Component, Page, object_dict
+from .html import Component, object_dict
 from .livewire import Livewire
 from .transport import Transport
 from .views import (
     SECTIONS,
-    campaigns_from_page,
     describe,
     form_component,
     lookup,
@@ -24,6 +24,7 @@ class Client:
     def __init__(self, transport: Transport) -> None:
         self.transport = transport
         self.livewire = Livewire(transport)
+        self.index = CampaignIndex(self.livewire)
 
     def login(self, email: str, password: str) -> dict[str, object]:
         if not email or not password:
@@ -31,6 +32,10 @@ class Client:
                 "Set OUTCRAFT_EMAIL and OUTCRAFT_PASSWORD locally, then run auth login."
             )
         page = self.livewire.page("/auth/login")
+        if urlsplit(page.url).path.rstrip("/") == "/campaigns" and any(
+            "tableSearch" in c.data for c in page.components
+        ):
+            return self.status()
         matches = [c for c in page.components if "email" in c.data and "password" in c.data]
         if len(matches) != 1:
             raise OutcraftError("Cannot identify 1 email/password login component.")
@@ -43,21 +48,8 @@ class Client:
         redirect = result.effects.get("redirect")
         if isinstance(redirect, str):
             self.transport.request("GET", redirect)
-        self._campaign_page()
+        self.index.page()
         return {"authenticated": True, "origin": self.transport.base_url}
-
-    def _campaign_page(self, archived: bool = False, page: int = 1) -> Page:
-        if page < 1:
-            raise OutcraftError("Page must be positive.")
-        path = "/campaigns/archived" if archived else "/campaigns"
-        result = self.livewire.page(path + (f"?page={page}" if page > 1 else ""))
-        if "/auth/" in urlsplit(result.url).path or any(
-            "password" in c.data for c in result.components
-        ):
-            raise OutcraftError("Not logged in. Run outcraft --env-file .env auth login.")
-        if not result.components:
-            raise OutcraftError("Campaign dashboard components are missing.")
-        return result
 
     def ensure_authenticated(self, email: str = "", password: str = "") -> None:
         page = self.livewire.page("/campaigns")
@@ -67,15 +59,11 @@ class Client:
             self.login(email, password)
 
     def campaigns(self, archived: bool = False, page: int = 1) -> list[dict[str, object]]:
-        return campaigns_from_page(self._campaign_page(archived, page))
+        return self.index.items(archived, page)
 
-    def _record(self, campaign_id: int, *, archived: bool = False) -> dict[str, object]:
-        matches = [c for c in self.campaigns(archived) if c["id"] == campaign_id]
-        if len(matches) != 1:
-            raise OutcraftError(
-                "Campaign not found on this list page. Use inspect to check pagination."
-            )
-        return matches[0]
+    def status(self) -> dict[str, object]:
+        self.index.page()
+        return {"authenticated": True, "origin": self.transport.base_url}
 
     def inspect(self, campaign_id: int, section: str = "instructions") -> dict[str, object]:
         path = section_path(campaign_id, section)
@@ -99,7 +87,7 @@ class Client:
     def create(self, name: str, confirm: bool = False) -> dict[str, object]:
         require_confirmation(confirm)
         valid_name(name)
-        page = self._campaign_page()
+        page = self.index.page()
         result = mounted_action(
             self.livewire,
             page,
@@ -114,19 +102,18 @@ class Client:
         match = None
         if isinstance(redirect, str):
             match = re.search(r"/campaigns/(\d+)(?:/|$)", self.transport.url(redirect))
-        records = self.campaigns()
-        candidates = [c for c in records if match and c["id"] == int(match[1])]
-        if len(candidates) != 1 or (name is not None and candidates[0]["name"] != name):
-            raise OutcraftError(
-                "Write submitted, but new campaign identity was not verified. Inspect before retrying."
-            )
-        return candidates[0]
+        if match is None:
+            raise OutcraftError("New campaign identity was not returned. Inspect before retrying.")
+        record = self.index.locate(int(match[1]))[1]
+        if name is not None and record["name"] != name:
+            raise OutcraftError("New campaign name was not verified. Inspect before retrying.")
+        return record
 
     def rename(self, campaign_id: int, name: str, confirm: bool = False) -> dict[str, object]:
         require_confirmation(confirm)
         valid_name(name)
         section_path(campaign_id, "finish")
-        page = self._campaign_page()
+        page, _ = self.index.locate(campaign_id)
         mounted_action(
             self.livewire,
             page,
@@ -135,7 +122,7 @@ class Client:
             {"name": name},
             str(campaign_id),
         )
-        result = self._record(campaign_id)
+        result = self.index.locate(campaign_id)[1]
         if result["name"] != name:
             raise OutcraftError("Rename did not persist. Inspect the campaign before retrying.")
         return result
@@ -143,7 +130,7 @@ class Client:
     def archive(self, campaign_id: int, confirm: bool = False) -> dict[str, object]:
         require_confirmation(confirm)
         section_path(campaign_id, "finish")
-        page = self._campaign_page()
+        page, _ = self.index.locate(campaign_id)
         mounted_action(
             self.livewire,
             page,
@@ -151,15 +138,15 @@ class Client:
             "archive",
             record=str(campaign_id),
         )
-        if any(c["id"] == campaign_id for c in self.campaigns()):
+        if self.index.contains(campaign_id):
             raise OutcraftError("Campaign is still in the active list; archive was not verified.")
-        record = self._record(campaign_id, archived=True)
+        record = self.index.locate(campaign_id, archived=True)[1]
         return {**record, "operation": "archive", "permanently_deleted": False}
 
     def duplicate(self, campaign_id: int, confirm: bool = False) -> dict[str, object]:
         require_confirmation(confirm)
         section_path(campaign_id, "finish")
-        page = self._campaign_page()
+        page, _ = self.index.locate(campaign_id)
         result = mounted_action(
             self.livewire,
             page,
@@ -174,7 +161,7 @@ class Client:
     ) -> dict[str, object]:
         require_confirmation(confirm)
         section_path(campaign_id, "finish")
-        before = self._record(campaign_id)
+        page, before = self.index.locate(campaign_id)
         desired = "Running" if running else "Paused"
         if before["status"] == desired:
             return before
@@ -182,7 +169,6 @@ class Client:
             raise OutcraftError(
                 "Campaign is not in a known running/paused state. Inspect setup first."
             )
-        page = self._campaign_page()
         mounted_action(
             self.livewire,
             page,
@@ -190,7 +176,7 @@ class Client:
             "toggle_campaign",
             record=str(campaign_id),
         )
-        result = self._record(campaign_id)
+        result = self.index.locate(campaign_id)[1]
         if result["status"] != desired:
             raise OutcraftError("Campaign status did not reach the requested state.")
         return result

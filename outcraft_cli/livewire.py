@@ -4,6 +4,7 @@ import json
 
 from .errors import OutcraftError
 from .html import Component, Page, object_dict, parse_page
+from .rendering import render_effects
 from .transport import Transport
 
 
@@ -72,11 +73,5 @@ class Livewire:
                 else "submitted fields"
             )
             raise OutcraftError(f"Validation failed for: {fields}.")
-        partials = effects.get("partials", {})
-        html = effects.get("html", "")
-        fragments = [html] if isinstance(html, str) else []
-        if isinstance(partials, dict):
-            fragments.extend(v for v in partials.values() if isinstance(v, str))
-        if any(fragments):
-            result.root = parse_page("\n".join(fragments)).root
+        result.root = render_effects(component.root, effects, component.memo.get("id"))
         return result

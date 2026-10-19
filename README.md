@@ -2,14 +2,14 @@
 
 Manage Outcraft campaigns from the terminal or Python instead of its dashboard. This standalone client uses the same login and Livewire requests as the dashboard, with 0 runtime dependencies and JSON output.
 
-**Unofficial client:** the dashboard protocol is not a stable public API. The implementation has contract tests; live authenticated writes remain unverified until local credentials and a disposable test campaign are available.
+**Blocked for direct writes:** authenticated GETs work with an existing session, but live Livewire POSTs return Cloudflare HTTP 403, including mounting a rename form. This is a draft implementation, not a working replacement for campaign editing until Outcraft permits this client or exposes supported campaign-management endpoints.
 
 ## Run
 
-Python 3.11 or newer is sufficient, with no install required:
+Python 3.11 or newer is sufficient, with no install required. While PR #1 is draft, use its feature branch:
 
 ```bash
-git clone git@github.com:Aduomas/outcraft-cli.git
+git clone --branch feat/campaign-cli git@github.com:Aduomas/outcraft-cli.git
 cd outcraft-cli
 ./outcraft --help
 cp .env.example .env
@@ -19,7 +19,7 @@ chmod 600 .env
 ./outcraft campaigns list
 ```
 
-In the initial checkout, `.env` already exists with 2 blank values and private permissions. Passwords containing `$`, `#`, or backslashes are treated literally, never executed or expanded. Environment variables take precedence over the explicitly selected env file.
+Passwords containing `$`, `#`, or backslashes are treated literally, never executed or expanded. Nonempty environment variables take precedence over the explicitly selected env file.
 
 Alternatively, install the command into an isolated environment:
 
@@ -50,7 +50,7 @@ python3 -m venv .venv
 
 List returns **1 dashboard page**, not an invented all-records API. `--search` filters that page locally. Export retrieves all 13 setup sections for 1 campaign, including the current editable data, table rows, actions, field bindings, and links.
 
-**`campaigns delete` means archive**, explicitly reported as `permanently_deleted: false`. No permanent-delete or restore contract was visible in the inspected account, so the CLI does not invent one. Resume can contact real leads; it always requires `--yes`.
+**`campaigns delete` means archive**, explicitly reported as `permanently_deleted: false`. No permanent-delete contract was visible, so the CLI does not invent one. The archive view exposes Re-Activate through the discovered `unarchive` action, not permanent deletion. Resume can contact real leads; it always requires `--yes`.
 
 ## Edit setup
 
@@ -147,4 +147,4 @@ uvx --from mypy==2.4.0 mypy outcraft_cli
 
 Tests use synthetic HTML and a real loopback HTTP server, not customer exports. They exercise login, cookie rotation, cross-origin refusal, exact signed-snapshot reuse, validation failures, create/rename persistence checks, partial-field updates, and network-free CLI dry runs.
 
-[Protocol evidence and observed contracts](docs/protocol.md) records the live inspection, the 13 setup routes, and the save request intercepted before reaching Outcraft. The live unauthenticated email/password handshake has been fetched successfully by this client's HTTP transport and parser; authenticated operations still require local verification.
+[Live verification and the Cloudflare blocker](docs/verification.md) records what actually ran. [Protocol evidence and observed contracts](docs/protocol.md) records the live inspection, the 13 setup routes, and the save request intercepted before reaching Outcraft. The client successfully fetched the live unauthenticated login handshake and, using a private existing session, read the authenticated campaign list. Its direct POSTs were blocked by Cloudflare HTTP 403; no CAPTCHA, WAF, or bot-protection bypass is implemented.

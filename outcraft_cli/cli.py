@@ -34,8 +34,7 @@ def main(argv: list[str] | None = None) -> int:
             elif args.command == "login":
                 result = client.login(*credentials(args.env_file))
             else:
-                client._campaign_page()
-                result = {"authenticated": True, "origin": transport.base_url}
+                result = client.status()
         else:
             client.ensure_authenticated(*credentials(args.env_file))
             result = run(args, client)

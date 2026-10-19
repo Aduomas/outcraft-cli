@@ -28,8 +28,8 @@ def credentials(env_file: Path | None) -> tuple[str, str]:
                 value = value[1:-1]
             values[key] = value
     return (
-        os.environ.get("OUTCRAFT_EMAIL", values.get("OUTCRAFT_EMAIL", "")),
-        os.environ.get("OUTCRAFT_PASSWORD", values.get("OUTCRAFT_PASSWORD", "")),
+        os.environ.get("OUTCRAFT_EMAIL") or values.get("OUTCRAFT_EMAIL", ""),
+        os.environ.get("OUTCRAFT_PASSWORD") or values.get("OUTCRAFT_PASSWORD", ""),
     )
 
 

@@ -6,7 +6,7 @@ from .errors import OutcraftError
 from .html import Component, Node, Page
 
 SECTIONS = {
-    "source": "apps/api",
+    "source": "",
     "brand": "company",
     "instructions": "campaign/context",
     "general": "campaign/general",
@@ -27,22 +27,37 @@ def section_path(campaign_id: int, section: str) -> str:
         raise OutcraftError(
             "Use a positive campaign ID and a section listed in campaigns sections."
         )
-    return f"/campaigns/{campaign_id}/onboarding/{SECTIONS[section]}"
+    return f"/campaigns/{campaign_id}/onboarding/{SECTIONS[section]}".rstrip("/")
 
 
 def campaigns_from_page(page: Page) -> list[dict[str, object]]:
     campaigns: dict[int, dict[str, object]] = {}
-    for link in page.root.find("a"):
-        match = re.search(r"/campaigns/(\d+)/onboarding/?$", link.attrs.get("href", ""))
-        if not match:
+    for node in page.root.find():
+        link = (
+            re.search(r"/campaigns/(\d+)/onboarding/?$", node.attrs.get("href", ""))
+            if node.tag == "a"
+            else None
+        )
+        card = re.search(r"\.table\.records\.(\d+)$", node.attrs.get("wire:key", ""))
+        archived = card is not None and any(
+            "mountAction('unarchive'" in value or 'mountAction("unarchive"' in value
+            for child in node.owned()
+            for key, value in child.attrs.items()
+            if key.startswith("wire:click")
+        )
+        match = card if archived else link
+        if match is None:
             continue
         campaign_id = int(match[1])
-        names = [n.text for n in link.find("li") if "fi-ta-text-item" in n.attrs.get("class", "")]
-        badges = [n.text for n in link.find("span") if "fi-badge" in n.attrs.get("class", "")]
-        status = next(
-            (t for t in badges if t in ("Running", "Paused", "Draft", "Archived", "Setup")),
-            "Unknown",
-        )
+        names = [n.text for n in node.owned("li") if "fi-ta-text-item" in n.attrs.get("class", "")]
+        if not names and archived:
+            names = [
+                n.text
+                for n in node.owned()
+                if "fi-ta-text-item" in n.attrs.get("class", "").split()
+            ]
+        badges = [n.text for n in node.owned("span") if "fi-badge" in n.attrs.get("class", "")]
+        status = "Archived" if archived else badges[-1] if badges else "Unknown"
         if not names:
             raise OutcraftError(
                 "Campaign card markup changed; cannot safely identify campaign names."
@@ -53,7 +68,7 @@ def campaigns_from_page(page: Page) -> list[dict[str, object]]:
 
 def table_rows(root: Node) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
-    for row in root.find("tr"):
+    for row in root.owned("tr"):
         keys: set[str] = set()
         for node in row.find():
             for value in node.attrs.values():

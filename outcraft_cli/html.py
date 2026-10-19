@@ -43,6 +43,13 @@ class Node:
                 result.extend(child.find(tag))
         return result
 
+    def owned(self, tag: str | None = None) -> list[Node]:
+        result = [self] if tag is None or self.tag == tag else []
+        for child in self.children:
+            if isinstance(child, Node) and "wire:id" not in child.attrs:
+                result.extend(child.owned(tag))
+        return result
+
 
 @dataclass
 class Component:
@@ -55,7 +62,8 @@ class Component:
             raw = object_dict(json.loads(self.snapshot))
             self.memo = object_dict(raw["memo"])
             self.name = str(self.memo["name"])
-            self.data = object_dict(unwrap(raw["data"]))
+            data = unwrap(raw["data"])
+            self.data = object_dict({} if data == [] else data)
         except (ValueError, KeyError, TypeError) as exc:
             raise OutcraftError(
                 "Invalid Livewire snapshot; the dashboard protocol may have changed."
@@ -64,7 +72,7 @@ class Component:
     @property
     def actions(self) -> list[dict[str, str]]:
         result = []
-        for node in self.root.find():
+        for node in self.root.owned():
             for key, value in node.attrs.items():
                 if key.startswith(("wire:click", "wire:submit")):
                     result.append({"label": node.text[:120], "expression": value})
@@ -73,7 +81,7 @@ class Component:
     @property
     def fields(self) -> list[dict[str, str]]:
         fields = []
-        for node in self.root.find():
+        for node in self.root.owned():
             for key, value in node.attrs.items():
                 if key.startswith("wire:model"):
                     item: dict[str, str] = {"path": value, "type": node.attrs.get("type", node.tag)}
@@ -84,6 +92,18 @@ class Component:
                             if k in node.attrs
                         }
                     )
+                    if node.attrs.get("type") == "radio" and "value" in node.attrs:
+                        item["value"] = node.attrs["value"]
+                    label = next(
+                        (
+                            label
+                            for label in self.root.owned("label")
+                            if label.attrs.get("for") == node.attrs.get("id") and "id" in node.attrs
+                        ),
+                        None,
+                    )
+                    if label is not None:
+                        item["label"] = label.text
                     fields.append(item)
         return fields
 

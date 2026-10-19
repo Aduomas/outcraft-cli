@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from .errors import OutcraftError
-from .html import Component, Page, object_dict
+from .html import Component, Page
 from .livewire import Livewire
 
 
@@ -55,10 +55,3 @@ def mounted_action(
             "Action is still mounted; validation or an additional confirmation may be required."
         )
     return result
-
-
-def mounted_data(component: Component) -> dict[str, object]:
-    actions = component.data.get("mountedActions")
-    if not isinstance(actions, list) or not actions:
-        raise OutcraftError("No mounted form returned by Outcraft.")
-    return object_dict(object_dict(actions[-1]).get("data", {}))
