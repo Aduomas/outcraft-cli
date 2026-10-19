@@ -197,6 +197,8 @@ Open `.env` in a text editor and fill in `OUTCRAFT_EMAIL` and `OUTCRAFT_PASSWORD
 .venv/bin/outcraft --env-file .env campaigns list
 .venv/bin/outcraft --env-file .env campaigns show 123 --section sequence
 .venv/bin/outcraft --env-file .env campaigns rename 123 'New name' --yes
+.venv/bin/outcraft --env-file .env leads count --campaign 123
+.venv/bin/outcraft --env-file .env analytics --campaign 123 --range 30d
 .venv/bin/outcraft --help
 ```
 
@@ -227,7 +229,7 @@ You are setting this up for a user who may not be technical. Follow these steps 
 | Publish is not launch | `publish_campaign` and `set_campaign_running` are separate steps. |
 | Dry runs are free | `--dry-run` sends no requests. |
 
-**MCP tools:** `list_campaigns`, `get_campaign`, `campaign_sections`, `export_campaign`, `inspect_dashboard` (read); `create_campaign`, `rename_campaign`, `update_campaign`, `set_campaign_running`, `archive_campaign`, `duplicate_campaign`, `publish_campaign`, `campaign_action` (write).
+**MCP tools:** `list_campaigns`, `get_campaign`, `campaign_sections`, `export_campaign`, `list_leads`, `count_leads`, `get_lead`, `get_analytics`, `inspect_dashboard` (read); `create_campaign`, `rename_campaign`, `update_campaign`, `set_campaign_running`, `archive_campaign`, `duplicate_campaign`, `publish_campaign`, `campaign_action` (write).
 
 ## How it works
 

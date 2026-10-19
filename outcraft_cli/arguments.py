@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from .analytics import RANGES
+from .leads import LEAD_STATUSES, PER_PAGE
 from .views import SECTIONS
 
 
@@ -74,6 +76,21 @@ def parser() -> argparse.ArgumentParser:
             command.add_argument("--data", required=True, help="JSON object or @file.json")
         if name != "list":
             _write_options(command)
+    leads = commands.add_parser("leads", help="Read leads; never changes them")
+    lead_commands = leads.add_subparsers(dest="command", required=True)
+    listing = lead_commands.add_parser("list", help="1 page of leads, newest first")
+    listing.add_argument("--campaign", type=int, help="Campaign ID; omit for all leads")
+    listing.add_argument("--status", choices=LEAD_STATUSES)
+    listing.add_argument("--page", type=int, default=1)
+    listing.add_argument("--per-page", type=int, choices=PER_PAGE, default=25)
+    count = lead_commands.add_parser("count", help="Lead totals per status")
+    count.add_argument("--campaign", type=int, help="Campaign ID; omit for all leads")
+    lead_commands.add_parser(
+        "show", help="1 lead's details, campaign runs and interactions"
+    ).add_argument("id", type=int)
+    analytics = commands.add_parser("analytics", help="Overview funnel and revenue")
+    analytics.add_argument("--campaign", type=int, help="Campaign ID; omit for all campaigns")
+    analytics.add_argument("--range", choices=RANGES, default="7d")
     inspect = commands.add_parser(
         "inspect", help="Inspect an authenticated same-origin dashboard path"
     )

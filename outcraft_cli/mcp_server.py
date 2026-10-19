@@ -74,6 +74,28 @@ def create_server(
         return execute(lambda client: client.export(campaign_id))
 
     @server.tool(annotations=read, structured_output=False)
+    def list_leads(
+        campaign_id: int | None = None, status: str | None = None, page: int = 1, per_page: int = 25
+    ) -> str:
+        """Retrieve 1 page of leads, optionally for 1 campaign and 1 status."""
+        return execute(lambda client: client.leads.list(campaign_id, status, page, per_page))
+
+    @server.tool(annotations=read, structured_output=False)
+    def count_leads(campaign_id: int | None = None) -> str:
+        """Count leads per status, optionally for 1 campaign."""
+        return execute(lambda client: client.leads.counts(campaign_id))
+
+    @server.tool(annotations=read, structured_output=False)
+    def get_lead(lead_id: int) -> str:
+        """Retrieve 1 lead's details, campaign runs and interaction timeline."""
+        return execute(lambda client: client.leads.show(lead_id))
+
+    @server.tool(annotations=read, structured_output=False)
+    def get_analytics(campaign_id: int | None = None, range: str = "7d") -> str:
+        """Retrieve the overview funnel and revenue, for all campaigns or 1, over 24h to 360d."""
+        return execute(lambda client: client.analytics.overview(campaign_id, range))
+
+    @server.tool(annotations=read, structured_output=False)
     def inspect_dashboard(path: str) -> str:
         """Inspect an authenticated dashboard path on the configured Outcraft origin."""
         return execute(lambda client: client.inspect_path(path))

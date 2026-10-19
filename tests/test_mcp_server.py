@@ -32,6 +32,10 @@ READS = {
     "get_campaign": {"campaign_id", "section"},
     "export_campaign": {"campaign_id"},
     "inspect_dashboard": {"path"},
+    "list_leads": {"campaign_id", "status", "page", "per_page"},
+    "count_leads": {"campaign_id"},
+    "get_lead": {"lead_id"},
+    "get_analytics": {"campaign_id", "range"},
 }
 WRITES = {
     "create_campaign": {"name": "Valid name"},

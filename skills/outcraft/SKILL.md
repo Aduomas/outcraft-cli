@@ -1,6 +1,6 @@
 ---
 name: outcraft
-description: Read and manage Outcraft outreach campaigns through the local outcraft CLI. Use when the user mentions Outcraft, or asks to list, show, export, create, rename, edit, pause, resume, archive, duplicate or publish a campaign.
+description: Read and manage Outcraft outreach campaigns through the local outcraft CLI. Use when the user mentions Outcraft, or asks to list, show, export, create, rename, edit, pause, resume, archive, duplicate or publish a campaign, or asks about its leads or analytics.
 ---
 
 # Outcraft CLI
@@ -22,6 +22,10 @@ Run every command as:
 | Campaign list | `campaigns list` (`--search`, `--page N`, `--archived`) |
 | One section | `campaigns show <id> --section <section>` (default `instructions`) |
 | Everything | `campaigns export <id>` |
+| Leads per status | `leads count` (`--campaign <id>`) |
+| Lead list | `leads list` (`--campaign <id>`, `--status <status>`, `--page N`, `--per-page 10\|25\|100`) |
+| One lead: runs and interactions | `leads show <lead-id>` |
+| Funnel and revenue | `analytics` (`--campaign <id>`, `--range 24h\|7d\|14d\|30d\|360d`) |
 | Unknown page or action | `inspect <dashboard-path>` |
 
 Look up IDs with `campaigns list --search <name>`; ask the user only when several match.

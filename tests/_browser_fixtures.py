@@ -107,6 +107,7 @@ class BrowserLoginServer(LocalServer):
         http_authenticated: bool = True,
         form_action: str = "/auth/session",
         redirect: str = "/campaigns",
+        reveal_delay_ms: int = 0,
     ) -> None:
         super().__init__()
         self.two_step = two_step
@@ -114,6 +115,7 @@ class BrowserLoginServer(LocalServer):
         self.http_authenticated = http_authenticated
         self.form_action = form_action
         self.redirect = redirect
+        self.reveal_delay_ms = reveal_delay_ms
         self.login_user_agent = ""
         self.submissions: list[dict[str, object]] = []
 
@@ -156,7 +158,8 @@ class BrowserLoginServer(LocalServer):
         return Reply(status=404, body="No synthetic route")
 
     def login_form(self) -> str:
-        return """<!doctype html><html><head><title>Synthetic login</title></head><body>
+        return (
+            """<!doctype html><html><head><title>Synthetic login</title></head><body>
 <form id="login" method="post"><label for="email">Email address</label>
 <input id="email" name="email" type="email" autocomplete="username" required>
 <div id="password-fields"></div><button type="submit" id="submit"></button>
@@ -167,6 +170,10 @@ const twoStep = TWO_STEP;
 let email = '';
 let passwordVisible = false;
 form.action = FORM_ACTION;
+if (REVEAL_DELAY_MS) {
+  form.hidden = true;
+  setTimeout(() => { form.hidden = false; }, REVEAL_DELAY_MS);
+}
 function showPassword() {
   document.querySelector('#password-fields').innerHTML =
     '<label for="password">Password</label>' +
@@ -198,6 +205,7 @@ form.addEventListener('submit', async event => {
     error.textContent = data.message;
   }
 });
-</script></body></html>""".replace("TWO_STEP", json.dumps(self.two_step)).replace(
-            "FORM_ACTION", json.dumps(self.form_action)
+</script></body></html>""".replace("TWO_STEP", json.dumps(self.two_step))
+            .replace("FORM_ACTION", json.dumps(self.form_action))
+            .replace("REVEAL_DELAY_MS", json.dumps(self.reveal_delay_ms))
         )

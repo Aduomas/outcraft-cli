@@ -4,9 +4,11 @@ import re
 from urllib.parse import urlsplit
 
 from .actions import find_action_component, mounted_action
+from .analytics import Analytics
 from .campaign_index import CampaignIndex
 from .errors import AuthenticationRequired, OutcraftError
 from .html import Component, object_dict
+from .leads import Leads
 from .livewire import Livewire
 from .transport import Transport
 from .views import (
@@ -25,6 +27,8 @@ class Client:
         self.transport = transport
         self.livewire = Livewire(transport)
         self.index = CampaignIndex(self.livewire)
+        self.leads = Leads(self.livewire)
+        self.analytics = Analytics(self.livewire)
 
     def login(self, email: str, password: str) -> dict[str, object]:
         from .browser_login import browser_login
