@@ -22,9 +22,6 @@ LEAD_STATUSES = (
 PER_PAGE = (10, 25, 100)
 RECORD_KEY = re.compile(r"\.table\.records\.(\d+)$")
 TOTAL = re.compile(r"of\s+([\d,]+)\s+results")
-INTERACTION_START = re.compile(
-    r"(?:\b\d+ \w+ ago )?(?=\b[A-Z][a-z]{2} \d{1,2}, \d{4} \d{2}:\d{2}:\d{2}\b)"
-)
 
 
 def leads_path(campaign_id: int | None) -> str:
@@ -68,7 +65,7 @@ class Leads:
             root = self.livewire.call(listing, component, "loadTable", updates=updates).root
             return result_total(root, len(records(root)))
 
-        # Outcraft's own idle filter times out with HTTP 500; statuses are exclusive, so derive it.
+        # The idle filter can time out with HTTP 500 (campaign 1787); statuses are exclusive.
         statuses = {status: total(status) for status in LEAD_STATUSES if status != "idle"}
         all_leads = total(None)
         statuses = {"idle": all_leads - sum(statuses.values()), **statuses}
@@ -96,9 +93,7 @@ class Leads:
             "id": lead_id,
             "details": details.root.text,
             "runs": run_records(runs),
-            "interactions": [
-                part.strip() for part in INTERACTION_START.split(timeline.root.text) if part.strip()
-            ],
+            "interactions": timeline_items(timeline.root),
         }
 
     def _table(self, campaign_id: int | None, status: str | None, page: int, per_page: int) -> Node:
@@ -107,9 +102,12 @@ class Leads:
         updates: dict[str, object] = {
             "selectedFilters": [f"status:{status}"] if status else [],
             "tableRecordsPerPage": per_page,
-            "paginators.page": page,
         }
-        return self.livewire.call(listing, component, "loadTable", updates=updates).root
+        loaded = self.livewire.call(listing, component, "loadTable", updates=updates)
+        # Filament resets pagination when the page size changes, so paginate afterwards.
+        if page > 1:
+            loaded = self.livewire.call(listing, loaded, "gotoPage", params=[page, "page"])
+        return loaded.root
 
 
 def fragment_name(component: Component) -> str | None:
@@ -134,45 +132,46 @@ def records(root: Node) -> list[tuple[str, Node]]:
 
 
 def result_total(root: Node, shown: int) -> int:
-    match = TOTAL.search(root.text)
+    footer = next(
+        (n for n in root.find() if "fi-pagination-overview" in n.attrs.get("class", "")), None
+    )
+    match = TOTAL.search(footer.text) if footer else None
     return int(match[1].replace(",", "")) if match else shown
 
 
 def lead_records(root: Node) -> list[dict[str, object]]:
+    """Each record holds column stacks: contact, place, then Status and Created label/value pairs."""
     result = []
     for key, node in records(root):
-        copyable = [n.text for n in node.find("span") if "fi-copyable" in n.attrs.get("class", "")]
-        texts = [
-            n.text
-            for n in node.find()
-            if "fi-ta-text-item" in n.attrs.get("class", "")
-            and n.text not in ("Status", "Created")
-            and not any(value in n.text for value in copyable)
+        stacks = [
+            [
+                c.text
+                for c in stack.children
+                if isinstance(c, Node) and "fi-ta-col" in c.attrs.get("class", "")
+            ]
+            for stack in node.find()
+            if "fi-ta-stack" in stack.attrs.get("class", "").split()
         ]
-        labelled = labelled_values(node)
+        labelled = {
+            cols[0]: cols[1]
+            for cols in stacks
+            if len(cols) == 2 and cols[0] in ("Status", "Created")
+        }
+        contact = stacks[0] if stacks else []
+        place = stacks[1] if len(stacks) > 1 and stacks[1][0] not in labelled else []
         result.append(
             {
                 "id": int(key),
-                "name": texts[0] if texts else "",
-                "email": next((v for v in copyable if "@" in v), None),
-                "phone": next((v for v in copyable if v.startswith("+")), None),
-                "country": texts[1] if len(texts) > 1 else None,
+                "name": contact[0] if contact else "",
+                "email": next((v for v in contact[1:] if "@" in v), None),
+                "phone": next((v for v in contact[1:] if v.startswith("+")), None),
+                "country": place[0] if place else None,
+                "timezone": place[1] if len(place) > 1 else None,
                 "status": labelled.get("Status"),
                 "created": labelled.get("Created"),
             }
         )
     return result
-
-
-def labelled_values(node: Node) -> dict[str, str]:
-    values: dict[str, str] = {}
-    flat = [n for n in node.find() if n.tag in ("div", "span") and n.text]
-    for index, item in enumerate(flat[:-1]):
-        if item.text in ("Status", "Created") and item.text not in values:
-            later = [n.text for n in flat[index + 1 :] if n.text != item.text]
-            if later:
-                values[item.text] = later[0]
-    return values
 
 
 def run_records(root: Node) -> list[dict[str, object]]:
@@ -195,6 +194,26 @@ def run_records(root: Node) -> list[dict[str, object]]:
             }
         )
     return result
+
+
+def timeline_items(root: Node) -> list[dict[str, object]]:
+    """Each interaction is a 3-column grid: relative and absolute time, an icon, then its content."""
+    items: list[dict[str, object]] = []
+    for node in root.find():
+        if not any(c.startswith("grid-cols-[8rem") for c in node.attrs.get("class", "").split()):
+            continue
+        columns = [c for c in node.children if isinstance(c, Node)]
+        if len(columns) < 3:
+            continue
+        when = [c.text for c in columns[0].children if isinstance(c, Node)]
+        items.append(
+            {
+                "ago": when[0] if when else None,
+                "at": " ".join(when[1:]) or None,
+                "details": columns[2].text,
+            }
+        )
+    return items
 
 
 def after(cells: list[str], label: str) -> str | None:

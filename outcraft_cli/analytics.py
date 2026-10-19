@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from .errors import OutcraftError
-from .html import Component, Node, Page, parse_page
+from .html import Component, Node, Page
 from .leads import fragment_name
 from .livewire import Livewire
 
@@ -31,13 +31,15 @@ class Analytics:
             )
             if filters is None:
                 raise OutcraftError("Analytics filter markup changed; cannot change the range.")
-            html = str(
-                self.livewire.call(
-                    page, filters, "$refresh", updates={"range": period}
-                ).effects.get("html", "")
+            # The rendered root already merges effects.html and effects.partials.
+            root = self.livewire.call(page, filters, "$refresh", updates={"range": period}).root
+            stats = stat_components(
+                [
+                    Component(n.attrs["wire:snapshot"], {}, n)
+                    for n in root.find()
+                    if "wire:snapshot" in n.attrs
+                ]
             )
-            rendered = parse_page(html)
-            stats, root = stat_components(rendered.components), rendered.root
         if not stats:
             raise OutcraftError("Analytics markup changed; no stat blocks found.")
         return {
