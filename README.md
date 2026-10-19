@@ -60,7 +60,7 @@ Not sure? Use **CLI + skill** in Claude Code or Codex, **MCP** everywhere else.
 | --- | --- |
 | "List my Outcraft campaigns" | Shows names, IDs and status. Read-only. |
 | "Show the sequence for campaign 123" | Shows that campaign's email steps. Read-only. |
-| "Rename campaign 123 to Q4 founders" | Asks you to confirm, then renames it. |
+| "Rename campaign 123 to Abandoned Checkout v2" | Asks you to confirm, then renames it. |
 | "Pause campaign 123" | Asks you to confirm, then pauses it. |
 | "Duplicate campaign 123" | Asks you to confirm, then copies it. |
 

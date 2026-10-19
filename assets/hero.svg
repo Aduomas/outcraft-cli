@@ -23,8 +23,8 @@ text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sa
 <g class="mono" font-size="14">
 <text class="muted" x="476" y="124">NAME</text><text class="muted" x="800" y="124">STATUS</text>
 <line class="rule" x1="476" y1="136" x2="904" y2="136"/>
-<text class="ink" x="476" y="162">Q4 founders outreach</text><circle class="on" cx="806" cy="157" r="5"/><text class="ink" x="818" y="162">running</text>
-<text class="ink" x="476" y="194">Agencies, EU</text><circle class="on" cx="806" cy="189" r="5"/><text class="ink" x="818" y="194">running</text>
-<text class="ink" x="476" y="226">Webinar follow-up</text><circle class="off" cx="806" cy="221" r="5"/><text class="ink" x="818" y="226">paused</text>
+<text class="ink" x="476" y="162">Abandoned Checkout</text><circle class="on" cx="806" cy="157" r="5"/><text class="ink" x="818" y="162">running</text>
+<text class="ink" x="476" y="194">Upsell</text><circle class="on" cx="806" cy="189" r="5"/><text class="ink" x="818" y="194">running</text>
+<text class="ink" x="476" y="226">Win-back</text><circle class="off" cx="806" cy="221" r="5"/><text class="ink" x="818" y="226">paused</text>
 </g>
 </svg>
