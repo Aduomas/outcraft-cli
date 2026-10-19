@@ -1,6 +1,6 @@
 <div align="center">
 
-# Outcraft CLI + MCP
+# Outcraft for AI agents
 
 **Read and manage your [Outcraft](https://outcraft.ai) campaigns by chatting with your AI agent.**
 
@@ -29,15 +29,30 @@
 
    ```text
    Set up https://github.com/Aduomas/outcraft-cli so I can
-   manage Outcraft from this agent. Follow the "For AI agents"
-   section of its README exactly, then tell me what passed.
+   manage Outcraft from this agent. Connect it with: CLI + skill.
+   Follow the "For AI agents" section of its README exactly,
+   then tell me what passed.
    ```
 
+   Want MCP instead? Change `CLI + skill` to `MCP`. [Which one?](#cli--skill-or-mcp)
 3. **Add your Outcraft login when the agent asks.** It creates a private file on your computer for your email and password. Type them into that file, **never into the chat**.
 4. **Start a new chat and say:** "List my Outcraft campaigns."
 
 > [!IMPORTANT]
 > You need an Outcraft **email and password** login. Google sign-in, two-factor codes and CAPTCHAs are not supported. Web chats like claude.ai or chatgpt.com cannot install this; use one of the apps above.
+
+## CLI + skill or MCP?
+
+**Pick one. Both give your agent the same campaign powers.**
+
+| | CLI + skill | MCP |
+| --- | --- | --- |
+| **How it works** | Your agent runs `outcraft` commands; a skill file teaches it how | Your app gets built-in Outcraft tools |
+| **Best for** | Claude Code, Codex | Cursor, Claude Desktop, any app without a terminal |
+| **Adds to every chat** | Only a 1-line skill description | 13 tool definitions |
+| **After setup** | Start a new chat | Start a new chat; desktop apps need a restart |
+
+Not sure? Use **CLI + skill** in Claude Code or Codex, **MCP** everywhere else.
 
 ## What you can ask
 
@@ -53,18 +68,26 @@
 
 ## Connect your app
 
-The quick start does this for you. Use these if you prefer to set it up by hand. Each one assumes you already finished [Install by hand](#install-by-hand) in `~/outcraft-cli`; replace `/Users/you` with your home folder (`/home/you` on Linux).
+The quick start does this for you. Use these to set it up by hand, after [Install by hand](#install-by-hand) in `~/outcraft-cli`. Replace `/Users/you` with your home folder (`/home/you` on Linux).
 
 <a id="claude-code"></a>
 <details>
 <summary><b>Claude Code</b></summary>
+
+**CLI + skill:**
+
+```bash
+mkdir -p ~/.claude/skills && ln -s ~/outcraft-cli/skills/outcraft ~/.claude/skills/outcraft
+```
+
+**Or MCP:**
 
 ```bash
 claude mcp add --transport stdio --scope user outcraft -- \
   /Users/you/outcraft-cli/.venv/bin/outcraft-mcp --env-file /Users/you/outcraft-cli/.env
 ```
 
-Start a new session, then run `/mcp` to see `outcraft` connected.
+Start a new session and ask "List my Outcraft campaigns." For MCP, `/mcp` also shows `outcraft`.
 
 </details>
 
@@ -72,12 +95,18 @@ Start a new session, then run `/mcp` to see `outcraft` connected.
 <details>
 <summary><b>Codex</b></summary>
 
+**CLI + skill:**
+
+```bash
+mkdir -p ~/.agents/skills && ln -s ~/outcraft-cli/skills/outcraft ~/.agents/skills/outcraft
+```
+
+**Or MCP**, with the command or by adding to `~/.codex/config.toml`:
+
 ```bash
 codex mcp add outcraft -- \
   /Users/you/outcraft-cli/.venv/bin/outcraft-mcp --env-file /Users/you/outcraft-cli/.env
 ```
-
-Or add this to `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.outcraft]
@@ -85,13 +114,13 @@ command = "/Users/you/outcraft-cli/.venv/bin/outcraft-mcp"
 args = ["--env-file", "/Users/you/outcraft-cli/.env"]
 ```
 
-Start a new session, then run `/mcp` to see `outcraft` listed.
+Start a new session and ask "List my Outcraft campaigns." For MCP, `/mcp` also shows `outcraft`.
 
 </details>
 
 <a id="cursor"></a>
 <details>
-<summary><b>Cursor</b></summary>
+<summary><b>Cursor</b> (MCP)</summary>
 
 Merge this into `~/.cursor/mcp.json`, then restart Cursor:
 
@@ -110,7 +139,7 @@ Merge this into `~/.cursor/mcp.json`, then restart Cursor:
 
 <a id="claude-desktop"></a>
 <details>
-<summary><b>Claude Desktop</b></summary>
+<summary><b>Claude Desktop</b> (MCP)</summary>
 
 Open **Settings > Developer > Edit Config** and merge this into `claude_desktop_config.json`, then quit and reopen Claude:
 
@@ -129,16 +158,18 @@ Open **Settings > Developer > Edit Config** and merge this into `claude_desktop_
 
 <a id="other-mcp-apps"></a>
 <details>
-<summary><b>Other MCP apps</b></summary>
+<summary><b>Other apps</b></summary>
 
-Any app that runs local **stdio** MCP servers works. Point it at:
+**MCP:** any app that runs local **stdio** MCP servers works. Point it at:
 
 | Field | Value |
 | --- | --- |
 | Command | `/Users/you/outcraft-cli/.venv/bin/outcraft-mcp` |
 | Arguments | `--env-file /Users/you/outcraft-cli/.env` |
 
-Keep your password in the `.env` file, not in the app's MCP settings.
+**CLI + skill:** agents that read `SKILL.md` skills can load [`skills/outcraft`](skills/outcraft/SKILL.md) from their skills folder.
+
+Keep your password in the `.env` file, not in the app's settings.
 
 </details>
 
@@ -163,9 +194,9 @@ Open `.env` in a text editor and fill in `OUTCRAFT_EMAIL` and `OUTCRAFT_PASSWORD
 
 ```bash
 .venv/bin/outcraft --env-file .env auth login
-.venv/bin/outcraft campaigns list
-.venv/bin/outcraft campaigns show 123 --section sequence
-.venv/bin/outcraft campaigns rename 123 'New name' --yes
+.venv/bin/outcraft --env-file .env campaigns list
+.venv/bin/outcraft --env-file .env campaigns show 123 --section sequence
+.venv/bin/outcraft --env-file .env campaigns rename 123 'New name' --yes
 .venv/bin/outcraft --help
 ```
 
@@ -177,13 +208,16 @@ On Linux, Chromium may need system libraries: `.venv/bin/python -m playwright in
 
 You are setting this up for a user who may not be technical. Follow these steps in order and report honestly.
 
-1. **Install.** Clone into `~/outcraft-cli`, or reuse an existing checkout without overwriting local changes. Use the commands in [Install by hand](#install-by-hand): an isolated `.venv`, the `browser` and `mcp` extras, and Playwright's Chromium headless shell. Ask before any `sudo` or other admin change.
+1. **Install.** Use `~/outcraft-cli` (the skill expects this path); reuse an existing checkout there without overwriting local changes. Run the commands in [Install by hand](#install-by-hand): an isolated `.venv`, the `browser` and `mcp` extras, and Playwright's Chromium headless shell. Ask before any `sudo` or other admin change.
 2. **Credentials.** Create `.env` from `.env.example` with `chmod 600`; keep any values already there. Ask the user to type `OUTCRAFT_EMAIL` and `OUTCRAFT_PASSWORD` into that file themselves, or use a private secret prompt if your host has one. Never ask for the password in chat, print it, or place it in MCP settings. Do not `source` the file.
-3. **Register MCP.** Add the stdio server to the host you are running in, using absolute paths for both `outcraft-mcp` and `--env-file` (see [Connect your app](#connect-your-app)). Keep the user's other MCP servers. If this host cannot run local commands or stdio MCP, say so instead of claiming success.
-4. **Verify read-only.** Run `outcraft --env-file <abs>/.env auth login`, then `outcraft campaigns list`. Confirm the MCP tools are discoverable; if that needs a restart or new session, say exactly what is still unverified. **Do not create, edit, archive, publish or launch anything during setup.**
-5. **Report.** Give the install path, each check that actually passed, and the 1 next action the user must take. Configuration alone is not a working connection.
+3. **Connect, 1 mode only.** Use the mode in the user's prompt; default to CLI + skill when your host loads skills, otherwise MCP.
+   - **CLI + skill:** symlink `~/outcraft-cli/skills/outcraft` into your host's user skills folder (Claude Code `~/.claude/skills/`, Codex `~/.agents/skills/`). Keep existing skills.
+   - **MCP:** register the stdio server in your host with absolute paths for both `outcraft-mcp` and `--env-file` (see [Connect your app](#connect-your-app)). Keep the user's other MCP servers.
+   - If your host cannot run local commands or stdio MCP, say so instead of claiming success.
+4. **Verify read-only.** Run `outcraft --env-file ~/outcraft-cli/.env auth login`, then `campaigns list` with the same flag. Confirm the skill or MCP tools are discoverable; if that needs a new session, say exactly what is still unverified. **Do not create, edit, archive, publish or launch anything during setup.**
+5. **Report.** Give the install path, the mode, each check that actually passed, and the 1 next action the user must take. Configuration alone is not a working connection.
 
-**Rules after setup:**
+**Rules after setup** (the skill carries these for CLI mode):
 
 | Rule | Detail |
 | --- | --- |
