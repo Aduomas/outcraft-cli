@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+<title id="title">Outcraft in your AI agent</title>
+<desc id="desc">You ask your agent to list your Outcraft campaigns and it answers with a table of campaign names and statuses.</desc>
+<style>
+.bg { fill: #f3f5f2; } .card { fill: #ffffff; stroke: #d8dfd8; } .ink { fill: #15241a; } .muted { fill: #536158; }
+.you { fill: #244d31; } .youtext { fill: #ffffff; } .rule { stroke: #e3e8e3; } .on { fill: #2f7a47; } .off { fill: #9aa59d; }
+@media (prefers-color-scheme: dark) {
+  .bg { fill: #0f1712; } .card { fill: #16211a; stroke: #2a3a2f; } .ink { fill: #e6efe8; } .muted { fill: #93a399; }
+  .you { fill: #3d7a50; } .rule { stroke: #2a3a2f; } .on { fill: #5fbf7d; } .off { fill: #5d6b62; }
+}
+text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+</style>
+<rect class="bg" width="960" height="300" rx="18"/>
+<text class="muted" x="48" y="64" font-size="13" font-weight="700" letter-spacing="2">UNOFFICIAL OUTCRAFT · CLI + SKILL OR MCP</text>
+<text class="ink" x="48" y="112" font-size="38" font-weight="700" letter-spacing="-1">Run Outcraft</text>
+<text class="ink" x="48" y="156" font-size="38" font-weight="700" letter-spacing="-1">from your AI agent.</text>
+<text class="muted" x="48" y="200" font-size="17">Works with Claude Code, Codex, Cursor</text>
+<text class="muted" x="48" y="226" font-size="17">and Claude Desktop.</text>
+<rect class="card" x="452" y="36" width="476" height="228" rx="14"/>
+<rect class="you" x="642" y="56" width="266" height="36" rx="18"/>
+<text class="youtext" x="660" y="79" font-size="15">List my Outcraft campaigns</text>
+<g class="mono" font-size="14">
+<text class="muted" x="476" y="124">NAME</text><text class="muted" x="800" y="124">STATUS</text>
+<line class="rule" x1="476" y1="136" x2="904" y2="136"/>
+<text class="ink" x="476" y="162">Abandoned Checkout</text><circle class="on" cx="806" cy="157" r="5"/><text class="ink" x="818" y="162">running</text>
+<text class="ink" x="476" y="194">Upsell</text><circle class="on" cx="806" cy="189" r="5"/><text class="ink" x="818" y="194">running</text>
+<text class="ink" x="476" y="226">Win-back</text><circle class="off" cx="806" cy="221" r="5"/><text class="ink" x="818" y="226">paused</text>
+</g>
+</svg>
