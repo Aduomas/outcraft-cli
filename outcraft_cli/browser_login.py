@@ -20,6 +20,7 @@ def browser_login(transport: Transport, email: str, password: str) -> None:
         )
     try:
         from playwright.sync_api import Error, sync_playwright
+        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
     except ImportError:
         raise OutcraftError(
             "Browser login needs Playwright. Install outcraft-cli[browser], then run "
@@ -42,6 +43,11 @@ def browser_login(transport: Transport, email: str, password: str) -> None:
                 headers: dict[str, str] = {}
                 if not urlsplit(page.url).path.startswith("/campaigns"):
                     email_input = page.locator('input[type="email"]:visible')
+                    # The form is hidden until the page's scripts run after domcontentloaded.
+                    try:
+                        email_input.first.wait_for(state="visible")
+                    except PlaywrightTimeoutError:
+                        pass
                     if email_input.count() != 1:
                         raise OutcraftError(
                             "Cannot identify 1 login form. Browser verification may be required."

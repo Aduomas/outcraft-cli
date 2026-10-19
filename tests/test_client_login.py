@@ -103,6 +103,14 @@ class BrowserClientLoginTest(unittest.TestCase):
         self.assertNotIn(PASSWORD, persisted)
         self.assertNotIn(EMAIL, persisted)
 
+    def test_login_waits_for_a_form_revealed_after_page_load(self) -> None:
+        server = self.server(two_step=True, reveal_delay_ms=300)
+
+        result = self.client(server).login(EMAIL, PASSWORD)
+
+        self.assertEqual(result, {"authenticated": True, "origin": server.base_url})
+        self.assertEqual(len(server.submissions), 1)
+
     def test_one_step_login_and_second_explicit_login_use_fresh_browser_contexts(self) -> None:
         server = self.server()
         client = self.client(server)
