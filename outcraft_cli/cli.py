@@ -24,20 +24,21 @@ def main(argv: list[str] | None = None) -> int:
         if args.group == "campaigns" and args.command == "sections":
             print(json.dumps(SECTIONS, indent=2))
             return 0
-        transport = Transport(args.base_url, args.session_file)
-        client = Client(transport)
-        if args.group == "auth":
-            if args.command == "logout":
-                if args.session_file.exists():
-                    args.session_file.unlink()
-                result: object = {"authenticated": False, "scope": "local session only"}
-            elif args.command == "login":
-                result = client.login(*credentials(args.env_file))
-            else:
-                result = client.status()
+        if args.group == "auth" and args.command == "logout":
+            args.session_file.unlink(missing_ok=True)
+            result: object = {"authenticated": False, "scope": "local session only"}
         else:
-            client.ensure_authenticated(*credentials(args.env_file))
-            result = run(args, client)
+            with Transport(args.base_url, args.session_file) as transport:
+                client = Client(transport)
+                if args.group == "auth":
+                    result = (
+                        client.login(*credentials(args.env_file))
+                        if args.command == "login"
+                        else client.status()
+                    )
+                else:
+                    client.ensure_authenticated(*credentials(args.env_file))
+                    result = run(args, client)
         print(json.dumps(redact(result), indent=2, ensure_ascii=False))
         return 0
     except (OutcraftError, OSError) as exc:

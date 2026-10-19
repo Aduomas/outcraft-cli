@@ -1,18 +1,15 @@
 from __future__ import annotations
 
 import json
-import os
-import tempfile
 from dataclasses import dataclass
-from http.client import HTTPMessage
-from http.cookiejar import LoadError, MozillaCookieJar
+from http.cookiejar import CookieJar
 from pathlib import Path
-from typing import IO
-from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlsplit
-from urllib.request import HTTPCookieProcessor, HTTPRedirectHandler, Request, build_opener
 
-from .errors import OutcraftError
+import httpx
+
+from .errors import AuthenticationRequired, OutcraftError
+from .session import identity_headers, load_session, save_session, session_cookie
 
 
 @dataclass(frozen=True)
@@ -20,38 +17,6 @@ class Response:
     url: str
     text: str
     status: int
-
-
-class _OriginRedirects(HTTPRedirectHandler):
-    def __init__(self, transport: Transport) -> None:
-        self.transport = transport
-
-    def redirect_request(
-        self, req: Request, fp: IO[bytes], code: int, msg: str, headers: HTTPMessage, newurl: str
-    ) -> Request | None:
-        try:
-            self.transport.url(newurl)
-            if req.method not in ("GET", "HEAD"):
-                raise OutcraftError(
-                    "Unexpected redirect after a write. Verify state before retrying."
-                )
-        except OutcraftError:
-            fp.close()
-            raise
-        return super().redirect_request(req, fp, code, msg, headers, newurl)
-
-    def http_error_302(
-        self, req: Request, fp: IO[bytes], code: int, msg: str, headers: HTTPMessage
-    ) -> object:
-        # urllib normalizes // redirects before redirect_request; reject their raw form first.
-        location = headers.get("Location", "")
-        if location.startswith("//"):
-            fp.close()
-            raise OutcraftError("Protocol-relative redirect refused.")
-        result: object = super().http_error_302(req, fp, code, msg, headers)
-        return result
-
-    http_error_301 = http_error_303 = http_error_307 = http_error_308 = http_error_302
 
 
 class Transport:
@@ -78,17 +43,21 @@ class Transport:
         self.base_url = base_url.rstrip("/")
         self.session_file = session_file
         self.timeout = timeout
-        self.cookies = MozillaCookieJar()
-        if session_file and session_file.exists():
-            if session_file.is_symlink():
-                raise OutcraftError("Session file must not be a symlink.")
-            try:
-                self.cookies.load(str(session_file), ignore_discard=True)
-            except (OSError, LoadError) as exc:
-                raise OutcraftError(
-                    "Cannot read the session file. Log in with a fresh session file."
-                ) from exc
-        self.opener = build_opener(HTTPCookieProcessor(self.cookies), _OriginRedirects(self))
+        self.cookies = CookieJar()
+        self.headers = load_session(session_file, self.base_url, self.cookies)
+        self._http = httpx.Client(
+            cookies=self.cookies, timeout=timeout, follow_redirects=False, trust_env=False
+        )
+        self._referer = self.base_url + "/"
+
+    def __enter__(self) -> Transport:
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        self.close()
+
+    def close(self) -> None:
+        self._http.close()
 
     def url(self, path: str) -> str:
         if path.startswith("//") or "\\" in path or any(ord(c) < 32 for c in path):
@@ -105,54 +74,82 @@ class Transport:
             )
         return url
 
+    def adopt_browser_session(
+        self, cookies: list[dict[str, object]], headers: dict[str, str]
+    ) -> None:
+        replacement = CookieJar()
+        for item in cookies:
+            cookie = session_cookie(item, self.base_url)
+            if cookie is not None:
+                replacement.set_cookie(cookie)
+        selected = identity_headers(headers)
+        self.cookies.clear()
+        for cookie in replacement:
+            self.cookies.set_cookie(cookie)
+        self.headers = selected
+        self._save()
+
     def request(self, method: str, path: str, payload: object = None) -> Response:
         method = method.upper()
         url = self.url(path)
-        headers = {"User-Agent": "outcraft-cli/0.1", "Accept": "text/html, application/json"}
+        headers = {
+            "user-agent": "outcraft-cli/0.1",
+            "accept": "text/html, application/json",
+            **self.headers,
+        }
         body = None
         if payload is not None:
             body = json.dumps(payload).encode()
             headers.update(
                 {
-                    "Content-Type": "application/json",
-                    "X-Livewire": "true",
-                    "Origin": self.base_url,
-                    "Referer": self.base_url + "/",
+                    "content-type": "application/json",
+                    "x-livewire": "true",
+                    "origin": self.base_url,
+                    "referer": self._referer,
                 }
             )
-        request = Request(url, data=body, headers=headers, method=method)
         try:
-            with self.opener.open(request, timeout=self.timeout) as reply:
-                response = Response(reply.url, reply.read().decode("utf-8"), reply.status)
-        except HTTPError as exc:
-            exc.close()
-            advice = {
-                401: "Log in again.",
-                403: "Access denied or browser challenge; use the dashboard.",
-                419: "Session or CSRF expired; log in again.",
-                422: "Validation failed; check input fields.",
-                429: "Rate limited; wait before retrying.",
-            }.get(exc.code, "Verify state before retrying a write.")
-            raise OutcraftError(f"Outcraft returned HTTP {exc.code}. {advice}") from None
-        except (URLError, TimeoutError, OSError, UnicodeError):
+            for _ in range(11):
+                with self._http.stream(method, url, headers=headers, content=body) as reply:
+                    reply.read()
+                    if reply.status_code in (301, 302, 303, 307, 308):
+                        location = reply.headers.get("location", "")
+                        if location.startswith("//"):
+                            raise OutcraftError("Protocol-relative redirect refused.")
+                        destination = self.url(urljoin(str(reply.url), location))
+                        if method not in ("GET", "HEAD"):
+                            raise OutcraftError(
+                                "Unexpected redirect after a write. Verify state before retrying."
+                            )
+                        url = destination
+                        continue
+                    if reply.status_code >= 400:
+                        advice = {
+                            401: "Log in again.",
+                            403: "Access denied or browser challenge. Run auth login again.",
+                            419: "Session or CSRF expired; log in again.",
+                            422: "Validation failed; check input fields.",
+                            429: "Rate limited; wait before retrying.",
+                        }.get(reply.status_code, "Verify state before retrying a write.")
+                        error = (
+                            AuthenticationRequired
+                            if reply.status_code in (401, 403, 419)
+                            else OutcraftError
+                        )
+                        raise error(f"Outcraft returned HTTP {reply.status_code}. {advice}")
+                    response = Response(
+                        str(reply.url), reply.content.decode("utf-8"), reply.status_code
+                    )
+                    if method == "GET":
+                        self._referer = response.url
+                    return response
+            raise OutcraftError("Too many redirects. Log in again.")
+        except (httpx.RequestError, OSError, UnicodeError):
             raise OutcraftError(
                 "Request failed or timed out. Verify state before retrying a write."
             ) from None
         finally:
             self._save()
-        return response
 
     def _save(self) -> None:
-        if self.session_file is None:
-            return
-        parent = self.session_file.parent
-        parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        fd, temporary = tempfile.mkstemp(prefix=".outcraft-", dir=parent)
-        try:
-            os.close(fd)
-            self.cookies.save(temporary, ignore_discard=True)
-            os.chmod(temporary, 0o600)
-            os.replace(temporary, self.session_file)
-        finally:
-            if os.path.exists(temporary):
-                os.unlink(temporary)
+        save_session(self.session_file, self.base_url, self.cookies, self.headers)

@@ -124,6 +124,7 @@ class LocalServer:
                 self.send_response(reply.status)
                 for name, value in reply.headers:
                     self.send_header(name, value)
+                self.send_header("Connection", "close")
                 self.send_header("Content-Length", str(len(payload)))
                 self.end_headers()
                 self.wfile.write(payload)

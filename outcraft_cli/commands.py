@@ -96,8 +96,7 @@ def run(args: argparse.Namespace, client: Client) -> object:
     if command == "sections":
         return SECTIONS
     if command == "list":
-        records = client.campaigns(args.archived, args.page)
-        return [r for r in records if args.search.casefold() in str(r["name"]).casefold()]
+        return client.campaigns(args.archived, args.page, args.search)
     if command == "show":
         return client.inspect(args.id, args.section)
     if command == "export":

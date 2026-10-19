@@ -21,7 +21,7 @@ class CliCampaignsTest(unittest.TestCase):
         environment.start()
         self.addCleanup(environment.stop)
         forbidden = patch(
-            "urllib.request.OpenerDirector.open",
+            "socket.socket.connect",
             side_effect=AssertionError("HTTP forbidden in CLI dry run"),
         )
         self.network = forbidden.start()

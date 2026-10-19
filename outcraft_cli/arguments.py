@@ -13,17 +13,9 @@ def _write_options(parser: argparse.ArgumentParser) -> None:
 
 def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
-        description="Outcraft campaign CLI. JSON output, no browser required."
+        description="Outcraft campaign CLI. Playwright login, HTTPX requests, JSON output."
     )
-    root.add_argument(
-        "--env-file", type=Path, help="Private file with OUTCRAFT_EMAIL and OUTCRAFT_PASSWORD"
-    )
-    root.add_argument(
-        "--session-file",
-        type=Path,
-        default=Path.home() / ".local/state/outcraft-cli/session.cookies",
-    )
-    root.add_argument("--base-url", default="https://app.outcraft.ai")
+    add_connection_options(root)
     commands = root.add_subparsers(dest="group", required=True)
     auth = commands.add_parser("auth").add_subparsers(dest="command", required=True)
     for name in ("login", "status", "logout"):
@@ -94,3 +86,15 @@ def parser() -> argparse.ArgumentParser:
     call.add_argument("--updates", default="{}", help="JSON updates or @file.json")
     _write_options(call)
     return root
+
+
+def add_connection_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--env-file", type=Path, help="Private file with OUTCRAFT_EMAIL and OUTCRAFT_PASSWORD"
+    )
+    parser.add_argument(
+        "--session-file",
+        type=Path,
+        default=Path.home() / ".local/state/outcraft-cli/session.json",
+    )
+    parser.add_argument("--base-url", default="https://app.outcraft.ai")

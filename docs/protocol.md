@@ -4,9 +4,9 @@ Outcraft's campaign dashboard uses server-rendered Laravel Livewire, not a stabl
 
 ## Login and request lifecycle
 
-1. GET `/auth/login` to obtain session cookies, the CSRF token, the login component's signed snapshot, and the current update URI.
-2. POST to the discovered `script[data-update-uri]`, observed as `/livewire-9388d904/update`, calling `authenticate` with updates for `email`, `password`, and `rememberMe`.
-3. Keep cookies, including rotations, and preserve each server snapshot byte-for-byte. Send property changes separately in `updates`.
+1. Playwright opens `/auth/login` in a fresh headless Chromium context, without a persistent or personal browser profile.
+2. The browser submits the email/password form, including Outcraft's email-first step when present. It transfers origin-scoped cookies and browser identity headers to HTTPX, then closes. HTTPX must verify the authenticated campaign index before login is reported as successful.
+3. HTTPX handles all subsequent requests. Persist cookies, including rotations, and browser identity headers together in an owner-only session file. Preserve each server snapshot byte-for-byte and send property changes separately in `updates`.
 4. Replace the snapshot after every reply. Livewire 4 returns HTML under `effects.html` or named `effects.partials`, and may return a redirect, events, or validation errors.
 5. Re-fetch the relevant page to verify durable state after a mutation. Draft saving, publishing, and running are separate outcomes.
 
@@ -57,7 +57,7 @@ The Continue request was intercepted and aborted before reaching the server: `__
 
 A new campaign initially opens `/campaigns/<id>/onboarding`. Its component has `data.template_id`, `data.provider`, `data.direction`, and `step`. Radio field IDs and values expose the current objective/provider choices. The observed Continue method is `continue`: step 1 selects the objective, step 2 selects the provider, and the form also exposes `submitTemplateSelectFormWithIntegration`.
 
-The approved test selected template 5 (Send Information) and provider `csv` (CSV File / Manual), then redirected to the brand page with setup still incomplete. `inspect` and low-level `call` expose this contract without adding an endpoint or assuming an API source. These direct POSTs are subject to the same Cloudflare block as campaign editing.
+The approved test selected template 5 (Send Information) and provider `csv` (CSV File / Manual), then redirected to the brand page with setup still incomplete. `inspect` and low-level `call` expose this contract without adding an endpoint or assuming an API source. Authentication and Cloudflare checks still apply to every request.
 
 ## Sequence fields
 
@@ -67,6 +67,8 @@ Never replay a snapshot captured from another account or session, or infer a met
 
 ## Verification limits
 
-The initial inspection was read-only: 5 active-list campaigns and 0 archived campaigns. After explicit approval, empty test campaign 1782 was created, renamed, configured with Send Information and a manual CSV source, then archived in Chrome, without leads or launch. Authenticated CLI GETs worked; direct Livewire POSTs were blocked by Cloudflare HTTP 403. See [live verification](verification.md). Mutating commands require explicit confirmation; dry runs do not POST.
+The initial inspection was read-only: 5 active-list campaigns and 0 archived campaigns. After explicit approval, empty test campaign 1782 was created, renamed, configured with Send Information and a manual CSV source, then archived in Chrome, without leads or launch. The original urllib client could read authenticated pages but its POSTs returned Cloudflare HTTP 403. See [live verification](verification.md).
+
+Later, standard Playwright passed 3 fresh-session blank-login checks. Transferring its cookies and request headers to HTTPX produced the expected server validation response in 3 of 3 checks, including after Chromium closed; fresh HTTPX without that session returned 403 in all 3 controls. These checks used no real credentials and do not prove successful account login or authenticated campaign writes. CLI mutations require `--yes`, MCP mutations require `confirm: true`, and CLI dry runs make no requests. Neither client silently retries a failed mutation.
 
 Primary references: [Livewire hydration](https://livewire.laravel.com/docs/4.x/hydration), [Livewire JavaScript protocol](https://livewire.laravel.com/docs/4.x/javascript). Outcraft-specific facts come from the signed-in Chrome tab, rendered contracts, and captured network requests.

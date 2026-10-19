@@ -22,8 +22,8 @@ class CampaignIndex:
             "password" in c.data for c in result.components
         ):
             raise OutcraftError("Not logged in. Run outcraft --env-file .env auth login.")
-        if not result.components:
-            raise OutcraftError("Campaign dashboard components are missing.")
+        if not any("tableSearch" in component.data for component in result.components):
+            raise OutcraftError("Campaign dashboard table is missing. Login was not verified.")
         return result
 
     def items(self, archived: bool = False, page: int = 1) -> list[dict[str, object]]:

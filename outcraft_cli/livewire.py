@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from .errors import OutcraftError
+from .errors import AuthenticationRequired, OutcraftError
 from .html import Component, Page, object_dict, parse_page
 from .rendering import render_effects
 from .transport import Transport
@@ -17,7 +17,7 @@ class Livewire:
         page = parse_page(response.text)
         page.url = response.url
         if not page.csrf or not page.update_uri:
-            raise OutcraftError(
+            raise AuthenticationRequired(
                 "No Livewire handshake found. Login or a browser challenge may be required."
             )
         self.transport.url(page.update_uri)

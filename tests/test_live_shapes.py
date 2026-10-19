@@ -113,6 +113,12 @@ class DashboardWithBellTest(unittest.TestCase):
 
 
 class LoginWithValidSessionTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        from _browser_fixtures import require_chromium
+
+        require_chromium()
+
     def test_login_page_redirecting_to_campaigns_reports_authenticated_without_post(self) -> None:
         with LocalServer() as server:
             server.route("GET", "/auth/login", Reply.redirect("/campaigns"))

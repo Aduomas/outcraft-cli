@@ -5,7 +5,7 @@ from urllib.parse import urlsplit
 
 from .actions import find_action_component, mounted_action
 from .campaign_index import CampaignIndex
-from .errors import OutcraftError
+from .errors import AuthenticationRequired, OutcraftError
 from .html import Component, object_dict
 from .livewire import Livewire
 from .transport import Transport
@@ -27,39 +27,32 @@ class Client:
         self.index = CampaignIndex(self.livewire)
 
     def login(self, email: str, password: str) -> dict[str, object]:
-        if not email or not password:
-            raise OutcraftError(
-                "Set OUTCRAFT_EMAIL and OUTCRAFT_PASSWORD locally, then run auth login."
-            )
-        page = self.livewire.page("/auth/login")
-        if urlsplit(page.url).path.rstrip("/") == "/campaigns" and any(
-            "tableSearch" in c.data for c in page.components
-        ):
-            return self.status()
-        matches = [c for c in page.components if "email" in c.data and "password" in c.data]
-        if len(matches) != 1:
-            raise OutcraftError("Cannot identify 1 email/password login component.")
-        result = self.livewire.call(
-            page,
-            matches[0],
-            "authenticate",
-            updates={"email": email, "password": password, "rememberMe": True},
-        )
-        redirect = result.effects.get("redirect")
-        if isinstance(redirect, str):
-            self.transport.request("GET", redirect)
-        self.index.page()
-        return {"authenticated": True, "origin": self.transport.base_url}
+        from .browser_login import browser_login
+
+        browser_login(self.transport, email, password)
+        return self.status()
 
     def ensure_authenticated(self, email: str = "", password: str = "") -> None:
-        page = self.livewire.page("/campaigns")
+        try:
+            page = self.livewire.page("/campaigns")
+        except AuthenticationRequired:
+            if not email or not password:
+                raise
+            self.login(email, password)
+            return
         if "/auth/" in urlsplit(page.url).path or any(
             "password" in c.data for c in page.components
         ):
             self.login(email, password)
 
-    def campaigns(self, archived: bool = False, page: int = 1) -> list[dict[str, object]]:
-        return self.index.items(archived, page)
+    def campaigns(
+        self, archived: bool = False, page: int = 1, search: str = ""
+    ) -> list[dict[str, object]]:
+        return [
+            r
+            for r in self.index.items(archived, page)
+            if search.casefold() in str(r["name"]).casefold()
+        ]
 
     def status(self) -> dict[str, object]:
         self.index.page()
