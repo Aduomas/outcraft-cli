@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=78"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "outcraft-cli"
+version = "0.1.0"
+description = "Campaign management CLI and Python API for Outcraft"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+outcraft = "outcraft_cli.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["outcraft_cli*"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["outcraft_cli"]
